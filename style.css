@@ -1,0 +1,744 @@
+:root {
+    --primary-color: #0078d4;
+    --secondary-color: #2b579a;
+    --dark-bg: #1e1e1e;
+    --light-bg: #ffffff;
+    --border-color: #e1e1e1;
+    --text-color: #2d2d2d;
+    --sidebar-width: 250px;
+    --toolbar-height: 50px;
+    --selection-color: rgba(0, 120, 212, 0.3);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #f5f5f5;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Toolbar Styles */
+.toolbar {
+    height: var(--toolbar-height);
+    background-color: var(--light-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.toolbar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-button {
+    padding: 0 15px;
+    height: 30px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab-button:hover {
+    background-color: #f0f0f0;
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.toolbar-content {
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    height: calc(var(--toolbar-height) - 30px);
+}
+
+.tab-panel {
+    display: none;
+    width: 100%;
+}
+
+.tab-panel.active {
+    display: flex;
+    align-items: center;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    margin-right: 20px;
+    padding-right: 20px;
+    border-right: 1px solid var(--border-color);
+}
+
+.toolbar-group:last-child {
+    margin-right: 0;
+    padding-right: 0;
+    border-right: none;
+}
+
+.toolbar-button {
+    background: none;
+    border: none;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    height: 36px;
+    width: 36px;
+}
+
+.toolbar-button:hover {
+    background-color: #f0f0f0;
+}
+
+.toolbar-button.active {
+    background-color: #e6f2ff;
+    color: var(--primary-color);
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    font-size: 8px;
+    margin-left: 5px;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: none;
+    min-width: 150px;
+    z-index: 1001;
+    margin-top: 5px;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.color-picker-wrapper {
+    margin-left: 5px;
+}
+
+.color-picker {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Main Layout */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: #fafafa;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    z-index: 100;
+}
+
+.left-sidebar {
+    width: var(--sidebar-width);
+}
+
+.right-sidebar {
+    width: 300px;
+    border-right: none;
+    border-left: 1px solid var(--border-color);
+    transform: translateX(100%);
+}
+
+.right-sidebar.open {
+    transform: translateX(0);
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.add-btn, .close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 5px;
+    transition: background-color 0.2s;
+}
+
+.add-btn:hover, .close-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* Notebooks Tree */
+.notebooks-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.notebook-item, .section-item, .page-item {
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+}
+
+.notebook-item:hover, .section-item:hover, .page-item:hover {
+    background-color: #f0f0f0;
+}
+
+.notebook-item.active, .section-item.active, .page-item.active {
+    background-color: #e6f2ff;
+    color: var(--primary-color);
+}
+
+.notebook-item {
+    font-weight: 600;
+}
+
+.section-item {
+    padding-left: 25px;
+    font-weight: 500;
+}
+
+.page-item {
+    padding-left: 45px;
+}
+
+.item-icon {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.item-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-actions {
+    display: none;
+    margin-left: 5px;
+}
+
+.notebook-item:hover .item-actions, 
+.section-item:hover .item-actions, 
+.page-item:hover .item-actions {
+    display: flex;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 2px;
+    margin-left: 2px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* Canvas Container */
+.canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background-color: #f9f9f9;
+    background-image: 
+        linear-gradient(rgba(200, 200, 200, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200, 200, 200, 0.2) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.canvas-viewport {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+}
+
+#drawing-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.elements-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+}
+
+/* Element Base Styles */
+.element {
+    position: absolute;
+    box-sizing: border-box;
+    z-index: 10;
+}
+
+.element.selected {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Text Element */
+.text-element {
+    min-width: 200px;
+    min-height: 50px;
+    padding: 10px;
+    background-color: transparent;
+    border: 1px dashed transparent;
+    border-radius: 4px;
+}
+
+.text-element:focus {
+    border-color: var(--primary-color);
+    background-color: rgba(230, 242, 255, 0.3);
+    outline: none;
+}
+
+.text-element .ProseMirror {
+    outline: none;
+    min-height: 30px;
+}
+
+/* Image Element */
+.image-element {
+    max-width: 500px;
+    max-height: 500px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.image-element img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 4px;
+}
+
+/* Shape Element */
+.shape-element {
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+/* Math Element */
+.math-element {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: white;
+}
+
+/* Selection Box */
+.selection-box {
+    position: absolute;
+    border: 1px solid var(--primary-color);
+    background-color: var(--selection-color);
+    z-index: 100;
+    pointer-events: none;
+}
+
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    pointer-events: all;
+}
+
+.top-left { top: -5px; left: -5px; cursor: nw-resize; }
+.top-right { top: -5px; right: -5px; cursor: ne-resize; }
+.bottom-left { bottom: -5px; left: -5px; cursor: sw-resize; }
+.bottom-right { bottom: -5px; right: -5px; cursor: se-resize; }
+
+.rotate-handle {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    cursor: grab;
+    pointer-events: all;
+}
+
+.rotate-handle:active {
+    cursor: grabbing;
+}
+
+/* Tools Panel */
+.tools-panel {
+    padding: 15px;
+}
+
+.math-input-container {
+    margin-bottom: 20px;
+}
+
+#math-latex {
+    width: 100%;
+    height: 80px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: monospace;
+    resize: vertical;
+}
+
+#insert-math-equation-btn {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+#insert-math-equation-btn:hover {
+    background-color: var(--secondary-color);
+}
+
+.math-symbols h5 {
+    margin: 15px 0 10px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.symbols-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.symbol-btn {
+    padding: 8px;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.symbol-btn:hover {
+    background-color: #f0f0f0;
+    border-color: var(--primary-color);
+}
+
+/* Context Menu */
+.context-menu {
+    position: absolute;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 5px 0;
+    display: none;
+    z-index: 1002;
+    min-width: 150px;
+}
+
+.context-menu.show {
+    display: block;
+}
+
+.context-menu-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    background-color: #333;
+    color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .left-sidebar {
+        width: 200px;
+    }
+    
+    .toolbar-group {
+        margin-right: 10px;
+        padding-right: 10px;
+    }
+    
+    .toolbar-button {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+
+/* Tool Buttons */
+.tool-button {
+    background: none;
+    border: none;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    height: 36px;
+    width: 36px;
+}
+
+.tool-button:hover {
+    background-color: #f0f0f0;
+}
+
+.tool-button.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Pen Size Wrapper */
+.pen-size-wrapper {
+    display: flex;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.pen-size-wrapper input {
+    width: 80px;
+    margin-right: 5px;
+}
+
+/* Math Tabs */
+.math-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 10px;
+}
+
+.math-tab {
+    padding: 8px 15px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-color);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.math-tab:hover {
+    background-color: #f0f0f0;
+}
+
+.math-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Math Panels */
+.math-panels {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.math-panel-content {
+    display: none;
+}
+
+.math-panel-content.active {
+    display: block;
+}
+
+.math-panel-content h5 {
+    margin: 15px 0 10px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+/* Symbols Grid */
+.symbols-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+/* Math Input Container */
+.math-input-container {
+    margin-bottom: 20px;
+}
+
+#math-latex {
+    width: 100%;
+    height: 80px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: monospace;
+    resize: vertical;
+}
+
+#insert-math-equation-btn {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
+#insert-math-equation-btn:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Tree Context Menu */
+#tree-context-menu {
+    position: absolute;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 5px 0;
+    display: none;
+    z-index: 1002;
+    min-width: 150px;
+}
+
+#tree-context-menu.show {
+    display: block;
+}
+
+/* Formatting Button States */
+#bold-btn.active, #italic-btn.active, #underline-btn.active, #strikethrough-btn.active {
+    background-color: #e6f2ff;
+    color: var(--primary-color);
+}
+
+/* Disabled Buttons */
+.toolbar-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Alignment Buttons */
+#align-left-btn.active, #align-center-btn.active, #align-right-btn.active {
+    background-color: #e6f2ff;
+    color: var(--primary-color);
+}

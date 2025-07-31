@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneNote Clone - Advanced Note Editor</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="lib/tiptap/tiptap.min.css">
+    <link rel="stylesheet" href="lib/katex/katex.min.css">
+</head>
+<body>
+    <!-- Top Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-tabs">
+            <button class="tab-button active" data-tab="home">Home</button>
+            <button class="tab-button" data-tab="insert">Insert</button>
+            <button class="tab-button" data-tab="file">File</button>
+            <button class="tab-button contextual-tab" data-tab="shape-tools" style="display: none;">Shape Tools</button>
+            <button class="tab-button contextual-tab" data-tab="image-tools" style="display: none;">Image Tools</button>
+        </div>
+        
+        <div class="toolbar-content">
+            <!-- Home Tab Content -->
+            <div class="tab-panel active" id="home-tab">
+                <div class="toolbar-group">
+                    <button class="toolbar-button" id="undo-btn" title="Undo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 7v6h6"/>
+                            <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button" id="redo-btn" title="Redo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 7v6h-6"/>
+                            <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="toolbar-group">
+                    <button class="toolbar-button" id="bold-btn" title="Bold">
+                        <strong>B</strong>
+                    </button>
+                    <button class="toolbar-button" id="italic-btn" title="Italic">
+                        <em>I</em>
+                    </button>
+                    <button class="toolbar-button" id="underline-btn" title="Underline">
+                        <u>U</u>
+                    </button>
+                    <button class="toolbar-button" id="strikethrough-btn" title="Strikethrough">
+                        <s>S</s>
+                    </button>
+                </div>
+                
+                <div class="toolbar-group">
+                    <div class="dropdown">
+                        <button class="toolbar-button dropdown-toggle" id="font-family-btn">
+                            Font
+                        </button>
+                        <div class="dropdown-menu" id="font-family-dropdown">
+                            <div class="dropdown-item" data-font="Arial">Arial</div>
+                            <div class="dropdown-item" data-font="Times New Roman">Times New Roman</div>
+                            <div class="dropdown-item" data-font="Courier New">Courier New</div>
+                            <div class="dropdown-item" data-font="Georgia">Georgia</div>
+                            <div class="dropdown-item" data-font="Verdana">Verdana</div>
+                        </div>
+                    </div>
+                    
+                    <div class="dropdown">
+                        <button class="toolbar-button dropdown-toggle" id="font-size-btn">
+                            Size
+                        </button>
+                        <div class="dropdown-menu" id="font-size-dropdown">
+                            <div class="dropdown-item" data-size="12px">12px</div>
+                            <div class="dropdown-item" data-size="14px">14px</div>
+                            <div class="dropdown-item" data-size="16px">16px</div>
+                            <div class="dropdown-item" data-size="18px">18px</div>
+                            <div class="dropdown-item" data-size="24px">24px</div>
+                            <div class="dropdown-item" data-size="32px">32px</div>
+                        </div>
+                    </div>
+                    
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="text-color" class="color-picker" value="#000000">
+                    </div>
+                </div>
+                
+                <div class="toolbar-group">
+                    <button class="toolbar-button" id="align-left-btn" title="Align Left">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="17" y1="10" x2="3" y2="10"/>
+                            <line x1="21" y1="6" x2="3" y2="6"/>
+                            <line x1="21" y1="14" x2="3" y2="14"/>
+                            <line x1="17" y1="18" x2="3" y2="18"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button" id="align-center-btn" title="Align Center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="10" x2="6" y2="10"/>
+                            <line x1="21" y1="6" x2="3" y2="6"/>
+                            <line x1="21" y1="14" x2="3" y2="14"/>
+                            <line x1="18" y1="18" x2="6" y2="18"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button" id="align-right-btn" title="Align Right">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="21" y1="10" x2="7" y2="10"/>
+                            <line x1="21" y1="6" x2="3" y2="6"/>
+                            <line x1="21" y1="14" x2="3" y2="14"/>
+                            <line x1="21" y1="18" x2="7" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="toolbar-group">
+                    <button class="toolbar-button" id="bullet-list-btn" title="Bullet List">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"/>
+                            <line x1="8" y1="12" x2="21" y2="12"/>
+                            <line x1="8" y1="18" x2="21" y2="18"/>
+                            <line x1="3" y1="6" x2="3.01" y2="6"/>
+                            <line x1="3" y1="12" x2="3.01" y2="12"/>
+                            <line x1="3" y1="18" x2="3.01" y2="18"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button" id="numbered-list-btn" title="Numbered List">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"/>
+                            <line x1="8" y1="12" x2="21" y2="12"/>
+                            <line x1="8" y1="18" x2="21" y2="18"/>
+                            <path d="M3 6h.5M3 12h.5M3 18h.5"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            
+            <!-- Insert Tab Content -->
+            <div class="tab-panel" id="insert-tab">
+                <div class="toolbar-group">
+                    <button class="toolbar-button tool-button" id="insert-select-btn" title="Select">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button tool-button" id="insert-pan-btn" title="Pan">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button tool-button" id="insert-text-btn" title="Text">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="4 7 4 4 20 4 20 7"/>
+                            <line x1="9" y1="20" x2="15" y2="20"/>
+                            <line x1="12" y1="4" x2="12" y2="20"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button tool-button" id="insert-image-btn" title="Image">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown">
+                        <button class="toolbar-button tool-button dropdown-toggle" id="insert-shape-btn" title="Shape">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu" id="shape-dropdown">
+                            <div class="dropdown-item" data-shape="rectangle">Rectangle</div>
+                            <div class="dropdown-item" data-shape="circle">Circle</div>
+                            <div class="dropdown-item" data-shape="line">Line</div>
+                            <div class="dropdown-item" data-shape="triangle">Triangle</div>
+                            <div class="dropdown-item" data-shape="arrow">Arrow</div>
+                        </div>
+                    </div>
+                    <button class="toolbar-button tool-button" id="insert-math-btn" title="Math Equation">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 12h16M12 4v16"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="toolbar-group">
+                    <button class="toolbar-button tool-button" id="draw-pen-btn" title="Pen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                        </svg>
+                    </button>
+                    <button class="toolbar-button tool-button" id="draw-eraser-btn" title="Eraser">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 20H7L3 16l7-7 7 7-4 4z"/>
+                            <path d="M13 13l6 6"/>
+                        </svg>
+                    </button>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="pen-color" class="color-picker" value="#000000">
+                    </div>
+                    <div class="pen-size-wrapper">
+                        <input type="range" id="pen-size" min="1" max="20" value="3">
+                        <span id="pen-size-value">3</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- File Tab Content -->
+            <div class="tab-panel" id="file-tab">
+                <div class="toolbar-group">
+                    <button class="toolbar-button" id="new-notebook-btn" title="New Notebook">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        New Notebook
+                    </button>
+                    <button class="toolbar-button" id="save-notebook-btn" title="Save Notebook">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        Save
+                    </button>
+                    <button class="toolbar-button" id="load-notebook-btn" title="Load Notebook">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                        Load
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Shape Tools Tab Content -->
+            <div class="tab-panel" id="shape-tools-tab">
+                <div class="toolbar-group">
+                    <label>Fill Color:</label>
+                    <input type="color" id="shape-fill-color" class="color-picker" value="#ffffff">
+                </div>
+                <div class="toolbar-group">
+                    <label>Stroke Color:</label>
+                    <input type="color" id="shape-stroke-color" class="color-picker" value="#000000">
+                </div>
+                <div class="toolbar-group">
+                    <label>Stroke Width:</label>
+                    <input type="range" id="shape-stroke-width" min="1" max="20" value="2">
+                    <span id="shape-stroke-value">2</span>
+                </div>
+            </div>
+            
+            <!-- Image Tools Tab Content -->
+            <div class="tab-panel" id="image-tools-tab">
+                <div class="toolbar-group">
+                    <button class="toolbar-button" id="crop-image-btn" title="Crop Image">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6.13 1L6 16a2 2 0 002 2h15"/>
+                            <path d="M1 6.13L16 6a2 2 0 012 2v15"/>
+                        </svg>
+                        Crop
+                    </button>
+                    <button class="toolbar-button" id="reset-image-btn" title="Reset Image">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+                        </svg>
+                        Reset
+                    </button>
+                </div>
+                <div class="toolbar-group">
+                    <label>Opacity:</label>
+                    <input type="range" id="image-opacity" min="0" max="100" value="100">
+                    <span id="image-opacity-value">100%</span>
+                </div>
+                <div class="toolbar-group">
+                    <label>Border:</label>
+                    <input type="color" id="image-border-color" class="color-picker" value="#000000">
+                    <input type="range" id="image-border-width" min="0" max="10" value="0">
+                    <span id="image-border-value">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Sidebar (Notebooks Panel) -->
+        <div class="sidebar left-sidebar" id="notebooks-sidebar">
+            <div class="sidebar-header">
+                <h3>Notebooks</h3>
+                <button class="add-btn" id="add-notebook-btn" title="Add Notebook">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="notebooks-tree" id="notebooks-tree">
+                <!-- Notebooks will be dynamically added here -->
+            </div>
+        </div>
+        
+        <!-- Canvas Container -->
+        <div class="canvas-container" id="canvas-container">
+            <div class="canvas-viewport" id="canvas-viewport">
+                <!-- Drawing canvas -->
+                <canvas id="drawing-canvas"></canvas>
+                
+                <!-- Elements container -->
+                <div class="elements-container" id="elements-container">
+                    <!-- Elements will be dynamically added here -->
+                </div>
+                
+                <!-- Selection box -->
+                <div class="selection-box" id="selection-box" style="display: none;">
+                    <div class="resize-handle top-left"></div>
+                    <div class="resize-handle top-right"></div>
+                    <div class="resize-handle bottom-left"></div>
+                    <div class="resize-handle bottom-right"></div>
+                    <div class="rotate-handle"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar (Tools Drawer) -->
+        <div class="sidebar right-sidebar" id="tools-drawer">
+            <div class="sidebar-header">
+                <h3>Tools</h3>
+                <button class="close-btn" id="close-tools-btn" title="Close Tools">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Math Panel -->
+            <div class="tools-panel" id="math-panel">
+                <h4>Math Equation</h4>
+                <div class="math-input-container">
+                    <textarea id="math-latex" placeholder="Enter LaTeX equation..."></textarea>
+                    <button id="insert-math-equation-btn">Insert</button>
+                </div>
+                
+                <div class="math-tabs">
+                    <button class="math-tab active" data-tab="symbols">Symbols</button>
+                    <button class="math-tab" data-tab="structures">Structures</button>
+                    <button class="math-tab" data-tab="accents">Accents</button>
+                    <button class="math-tab" data-tab="brackets">Brackets</button>
+                    <button class="math-tab" data-tab="functions">Functions</button>
+                    <button class="math-tab" data-tab="matrices">Matrices</button>
+                </div>
+                
+                <div class="math-panels">
+                    <!-- Symbols Panel -->
+                    <div class="math-panel-content active" id="symbols-panel">
+                        <h5>Basic Operations</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="+">+</button>
+                            <button class="symbol-btn" data-symbol="-">-</button>
+                            <button class="symbol-btn" data-symbol="\times">×</button>
+                            <button class="symbol-btn" data-symbol="\div">÷</button>
+                            <button class="symbol-btn" data-symbol="\pm">±</button>
+                            <button class="symbol-btn" data-symbol="\mp">∓</button>
+                            <button class="symbol-btn" data-symbol="\cdot">·</button>
+                            <button class="symbol-btn" data-symbol="\ast">∗</button>
+                        </div>
+                        
+                        <h5>Relations</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="=">=</button>
+                            <button class="symbol-btn" data-symbol="\neq">≠</button>
+                            <button class="symbol-btn" data-symbol="<"><</button>
+                            <button class="symbol-btn" data-symbol=">">></button>
+                            <button class="symbol-btn" data-symbol="\leq">≤</button>
+                            <button class="symbol-btn" data-symbol="\geq">≥</button>
+                            <button class="symbol-btn" data-symbol="\approx">≈</button>
+                            <button class="symbol-btn" data-symbol="\equiv">≡</button>
+                        </div>
+                        
+                        <h5>Arrows</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\rightarrow">→</button>
+                            <button class="symbol-btn" data-symbol="\leftarrow">←</button>
+                            <button class="symbol-btn" data-symbol="\leftrightarrow">↔</button>
+                            <button class="symbol-btn" data-symbol="\Rightarrow">⇒</button>
+                            <button class="symbol-btn" data-symbol="\Leftarrow">⇐</button>
+                            <button class="symbol-btn" data-symbol="\Leftrightarrow">⇔</button>
+                            <button class="symbol-btn" data-symbol="\mapsto">↦</button>
+                            <button class="symbol-btn" data-symbol="\to">→</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Structures Panel -->
+                    <div class="math-panel-content" id="structures-panel">
+                        <h5>Fractions</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\frac{}{}">Fraction</button>
+                            <button class="symbol-btn" data-symbol="\dfrac{}{}">Display Fraction</button>
+                            <button class="symbol-btn" data-symbol="\binom{}{}">Binomial</button>
+                        </div>
+                        
+                        <h5>Roots</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\sqrt{}">Square Root</button>
+                            <button class="symbol-btn" data-symbol="\sqrt[{}]{}">nth Root</button>
+                        </div>
+                        
+                        <h5>Exponents and Subscripts</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="x^{2}">x²</button>
+                            <button class="symbol-btn" data-symbol="x_{2}">x₂</button>
+                            <button class="symbol-btn" data-symbol="x^{2}_{3}">x³₂</button>
+                        </div>
+                        
+                        <h5>Integrals and Sums</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\int">∫</button>
+                            <button class="symbol-btn" data-symbol="\oint">∮</button>
+                            <button class="symbol-btn" data-symbol="\iint">∬</button>
+                            <button class="symbol-btn" data-symbol="\iiint">∭</button>
+                            <button class="symbol-btn" data-symbol="\sum">∑</button>
+                            <button class="symbol-btn" data-symbol="\prod">∏</button>
+                            <button class="symbol-btn" data-symbol="\lim">lim</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Accents Panel -->
+                    <div class="math-panel-content" id="accents-panel">
+                        <h5>Accents</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\bar{x}">x̄</button>
+                            <button class="symbol-btn" data-symbol="\vec{x}">x⃗</button>
+                            <button class="symbol-btn" data-symbol="\dot{x}">ẋ</button>
+                            <button class="symbol-btn" data-symbol="\ddot{x}">ẍ</button>
+                            <button class="symbol-btn" data-symbol="\hat{x}">x̂</button>
+                            <button class="symbol-btn" data-symbol="\tilde{x}">x̃</button>
+                            <button class="symbol-btn" data-symbol="\acute{x}">x́</button>
+                            <button class="symbol-btn" data-symbol="\grave{x}">x̀</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Brackets Panel -->
+                    <div class="math-panel-content" id="brackets-panel">
+                        <h5>Brackets</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\left( \right)">( )</button>
+                            <button class="symbol-btn" data-symbol="\left[ \right]">[ ]</button>
+                            <button class="symbol-btn" data-symbol="\left\{ \right\}">{ }</button>
+                            <button class="symbol-btn" data-symbol="\left| \right|">| |</button>
+                            <button class="symbol-btn" data-symbol="\left\| \right\|">‖ ‖</button>
+                            <button class="symbol-btn" data-symbol="\left\langle \right\rangle">⟨ ⟩</button>
+                        </div>
+                        
+                        <h5>Stacks</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\binom{}{}">Binomial</button>
+                            <button class="symbol-btn" data-symbol="\stackrel{}{}">Stack</button>
+                            <button class="symbol-btn" data-symbol="\underset{}{}">Underset</button>
+                            <button class="symbol-btn" data-symbol="\overset{}{}">Overset</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Functions Panel -->
+                    <div class="math-panel-content" id="functions-panel">
+                        <h5>Trigonometric</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\sin">sin</button>
+                            <button class="symbol-btn" data-symbol="\cos">cos</button>
+                            <button class="symbol-btn" data-symbol="\tan">tan</button>
+                            <button class="symbol-btn" data-symbol="\sec">sec</button>
+                            <button class="symbol-btn" data-symbol="\csc">csc</button>
+                            <button class="symbol-btn" data-symbol="\cot">cot</button>
+                        </div>
+                        
+                        <h5>Inverse Trigonometric</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\arcsin">arcsin</button>
+                            <button class="symbol-btn" data-symbol="\arccos">arccos</button>
+                            <button class="symbol-btn" data-symbol="\arctan">arctan</button>
+                            <button class="symbol-btn" data-symbol="\sin^{-1}">sin⁻¹</button>
+                            <button class="symbol-btn" data-symbol="\cos^{-1}">cos⁻¹</button>
+                            <button class="symbol-btn" data-symbol="\tan^{-1}">tan⁻¹</button>
+                        </div>
+                        
+                        <h5>Logarithmic</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\log">log</button>
+                            <button class="symbol-btn" data-symbol="\ln">ln</button>
+                            <button class="symbol-btn" data-symbol="\log_{10}">log₁₀</button>
+                            <button class="symbol-btn" data-symbol="\log_{2}">log₂</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Matrices Panel -->
+                    <div class="math-panel-content" id="matrices-panel">
+                        <h5>Matrices</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\begin{matrix} a & b \\ c & d \end{matrix}">Matrix</button>
+                            <button class="symbol-btn" data-symbol="\begin{pmatrix} a & b \\ c & d \end{pmatrix}">Parentheses Matrix</button>
+                            <button class="symbol-btn" data-symbol="\begin{bmatrix} a & b \\ c & d \end{bmatrix}">Bracket Matrix</button>
+                            <button class="symbol-btn" data-symbol="\begin{vmatrix} a & b \\ c & d \end{vmatrix}">Determinant</button>
+                            <button class="symbol-btn" data-symbol="\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}">Norm</button>
+                        </div>
+                        
+                        <h5>Matrix Operations</h5>
+                        <div class="symbols-grid">
+                            <button class="symbol-btn" data-symbol="\det">det</button>
+                            <button class="symbol-btn" data-symbol="\operatorname{tr}">tr</button>
+                            <button class="symbol-btn" data-symbol="\operatorname{rank}">rank</button>
+                            <button class="symbol-btn" data-symbol="\dim">dim</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" id="context-delete">Delete</div>
+        <div class="context-menu-item" id="context-duplicate">Duplicate</div>
+        <div class="context-menu-item" id="context-bring-front">Bring to Front</div>
+        <div class="context-menu-item" id="context-send-back">Send to Back</div>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div class="toast" id="toast"></div>
+    
+    <!-- Hidden file input -->
+    <input type="file" id="file-input" style="display: none;" accept=".json,image/*">
+    
+    <!-- Scripts -->
+    <script src="lib/tiptap/tiptap.min.js"></script>
+    <script src="lib/katex/katex.min.js"></script>
+    <script src="app.js" type="module"></script>
+</body>
+</html>
