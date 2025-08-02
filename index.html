@@ -230,6 +230,13 @@
                         </svg>
                         Load
                     </button>
+                    <button class="toolbar-button" id="settings-btn" title="Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v6m0 6v6m4.22-10.22l4.24 4.24m-12.73 0l-4.24 4.24M20 12h-6m-6 0H2"/>
+                        </svg>
+                        Settings
+                    </button>
                 </div>
             </div>
             
@@ -344,7 +351,8 @@
                 </div>
                 
                 <div class="math-tabs">
-                    <button class="math-tab active" data-tab="symbols">Symbols</button>
+                    <button class="math-tab active" data-tab="recent">Recent</button>
+                    <button class="math-tab" data-tab="symbols">Symbols</button>
                     <button class="math-tab" data-tab="structures">Structures</button>
                     <button class="math-tab" data-tab="accents">Accents</button>
                     <button class="math-tab" data-tab="brackets">Brackets</button>
@@ -353,8 +361,16 @@
                 </div>
                 
                 <div class="math-panels">
+                    <!-- Recent Panel -->
+                    <div class="math-panel-content active" id="recent-panel">
+                        <h5>Recently Used</h5>
+                        <div class="symbols-grid" id="recent-symbols-grid">
+                            <!-- Recent symbols will be added dynamically -->
+                        </div>
+                    </div>
+                    
                     <!-- Symbols Panel -->
-                    <div class="math-panel-content active" id="symbols-panel">
+                    <div class="math-panel-content" id="symbols-panel">
                         <h5>Basic Operations</h5>
                         <div class="symbols-grid">
                             <button class="symbol-btn" data-symbol="+">+</button>
@@ -530,6 +546,56 @@
     
     <!-- Hidden file input -->
     <input type="file" id="file-input" style="display: none;" accept=".json,image/*">
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h4>Canvas Settings</h4>
+                <div class="setting-group">
+                    <label>Grid Size:</label>
+                    <input type="range" id="grid-size" min="10" max="50" value="20">
+                    <span id="grid-size-value">20px</span>
+                </div>
+                
+                <h4>Privacy & Security</h4>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="enable-encryption"> Enable Encryption
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label>Password:</label>
+                    <input type="password" id="encryption-password">
+                </div>
+                
+                <h4>Sync (Experimental)</h4>
+                <div class="setting-group">
+                    <label>
+                        <input type="checkbox" id="enable-sync"> Enable Python Backend Sync
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label>Backend URL:</label>
+                    <input type="text" id="backend-url" placeholder="http://localhost:8000">
+                </div>
+                
+                <h4>About</h4>
+                <div class="setting-group">
+                    <p>OneNote Clone v1.0</p>
+                    <p>A powerful note-taking application with infinite canvas, rich text editing, and math equation support.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings-btn">Save Settings</button>
+                <button class="close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts -->
     <script src="lib/tiptap/tiptap.min.js"></script>

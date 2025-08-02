@@ -1,34 +1,106 @@
 import { Editor } from 'https://cdn.skypack.dev/@tiptap/core?min'
 import StarterKit from 'https://cdn.skypack.dev/@tiptap/starter-kit?min'
 
-export class TextElement {
+export class BaseElement {
     constructor(data) {
-        this.type = 'text';
         this.id = data.id || null;
+        this.type = data.type;
         this.x = data.x || 100;
         this.y = data.y || 100;
-        this.width = data.width || 300;
-        this.height = data.height || 150;
+        this.width = data.width || 100;
+        this.height = data.height || 100;
         this.rotation = data.rotation || 0;
+        this.zIndex = data.zIndex || 0;
+    }
+
+    getScreenPosition(canvas) {
+        return {
+            x: this.x * canvas.scale + canvas.translateX,
+            y: this.y * canvas.scale + canvas.translateY,
+            width: this.width * canvas.scale,
+            height: this.height * canvas.scale
+        };
+    }
+
+    attachEventListeners(app) {
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+        
+        this.element.addEventListener('mousedown', (e) => {
+            if (this.type === 'text' && e.target.closest('.ProseMirror')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            initialX = this.x;
+            initialY = this.y;
+            
+            if (!e.ctrlKey && !e.shiftKey) {
+                app.selectElement(this.id);
+            }
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const dx = (e.clientX - startX) / app.canvas.scale;
+            const dy = (e.clientY - startY) / app.canvas.scale;
+            
+            this.x = initialX + dx;
+            this.y = initialY + dy;
+            
+            this.element.style.left = `${this.x * app.canvas.scale + app.canvas.translateX}px`;
+            this.element.style.top = `${this.y * app.canvas.scale + app.canvas.translateY}px`;
+            
+            app.canvas.updateSelectionBox();
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                app.updateElement(this.id, { x: this.x, y: this.y });
+            }
+        });
+        
+        this.element.addEventListener('click', (e) => {
+            if (!e.target.closest('.ProseMirror')) {
+                app.selectElement(this.id);
+            }
+        });
+    }
+}
+
+export class TextElement extends BaseElement {
+    constructor(data) {
+        super({ ...data, type: 'text' });
         this.content = data.content || '<p>Type here...</p>';
+        this.fontFamily = data.fontFamily || 'Arial';
+        this.fontSize = data.fontSize || '16px';
+        this.color = data.color || '#000000';
     }
 
     render(container) {
         this.element = document.createElement('div');
         this.element.className = 'element text-element';
         this.element.setAttribute('data-id', this.id);
-        this.element.style.left = `${this.x}px`;
-        this.element.style.top = `${this.y}px`;
-        this.element.style.width = `${this.width}px`;
-        this.element.style.height = `${this.height}px`;
-        this.element.style.transform = `rotate(${this.rotation}deg)`;
         
-        // Create editor container
+        const screenPos = this.getScreenPosition(app.canvas);
+        this.element.style.left = `${screenPos.x}px`;
+        this.element.style.top = `${screenPos.y}px`;
+        this.element.style.width = `${screenPos.width}px`;
+        this.element.style.height = `${screenPos.height}px`;
+        this.element.style.transform = `rotate(${this.rotation}deg)`;
+        this.element.style.fontFamily = this.fontFamily;
+        this.element.style.fontSize = this.fontSize;
+        this.element.style.color = this.color;
+        
+        // Editor container
         const editorContainer = document.createElement('div');
         editorContainer.className = 'editor-container';
         this.element.appendChild(editorContainer);
         
-        // Initialize Tiptap editor
+        // Initialize editor
         this.editor = new Editor({
             element: editorContainer,
             extensions: [StarterKit],
@@ -37,6 +109,7 @@ export class TextElement {
             editable: true,
             onUpdate: ({ editor }) => {
                 this.content = editor.getHTML();
+                app.history.saveState();
             }
         });
         

@@ -63,8 +63,8 @@ class OneNoteApp {
                 this.history.undo();
             }
             
-            // Ctrl/Cmd + Shift + Z: Redo
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+            // Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y: Redo
+            if ((e.ctrlKey || e.metaKey) && ((e.key === 'z' && e.shiftKey) || e.key === 'y')) {
                 e.preventDefault();
                 this.history.redo();
             }
@@ -73,6 +73,24 @@ class OneNoteApp {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
                 this.fileSystem.saveNotebook();
+            }
+            
+            // Ctrl/Cmd + X: Cut
+            if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+                e.preventDefault();
+                this.cutSelectedElement();
+            }
+            
+            // Ctrl/Cmd + C: Copy
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                e.preventDefault();
+                this.copySelectedElement();
+            }
+            
+            // Ctrl/Cmd + V: Paste
+            if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                e.preventDefault();
+                this.pasteElement();
             }
             
             // Delete key: Delete selected element
@@ -339,6 +357,38 @@ class OneNoteApp {
                 this.renderPage();
                 this.history.clear();
             }
+        }
+    }
+
+    cutSelectedElement() {
+        if (this.selectedElement !== null) {
+            this.copySelectedElement();
+            this.deleteSelectedElement();
+        }
+    }
+
+    copySelectedElement() {
+        if (this.selectedElement !== null) {
+            const element = this.currentPage.elements[this.selectedElement];
+            localStorage.setItem('onenote-clipboard', JSON.stringify(element));
+            this.ui.showToast('Element copied');
+        }
+    }
+
+    pasteElement() {
+        const clipboardData = localStorage.getItem('onenote-clipboard');
+        if (clipboardData) {
+            const element = JSON.parse(clipboardData);
+            
+            // Offset the pasted element
+            element.x += 20;
+            element.y += 20;
+            
+            // Remove the ID to create a new element
+            delete element.id;
+            
+            this.addElement(element);
+            this.ui.showToast('Element pasted');
         }
     }
 }

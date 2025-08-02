@@ -36,62 +36,310 @@ export class Canvas {
         this.canvasWidth = window.innerWidth * 10;
         this.canvasHeight = window.innerHeight * 10;
         
+        // Performance optimization
+        this.animationFrameId = null;
+        this.lastTime = 0;
+        this.needsRender = false;
+        
         this.setupCanvas();
         this.setupEventListeners();
+        this.setupPerformanceOptimizations();
+        this.startRenderLoop();
+    }
+
+    setupPerformanceOptimizations() {
+        // Track viewport bounds for selective rendering
+        this.viewportBounds = {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight
+        };
+        
+        // Throttle expensive operations
+        this.throttledRender = this.throttle(this.renderVisibleElements.bind(this), 100);
+    }
+
+    throttle(func, limit) {
+        let lastFunc;
+        let lastRan;
+        return function() {
+            const context = this;
+            const args = arguments;
+            if (!lastRan) {
+                func.apply(context, args);
+                lastRan = Date.now();
+            } else {
+                clearTimeout(lastFunc);
+                lastFunc = setTimeout(() => {
+                    if ((Date.now() - lastRan) >= limit) {
+                        func.apply(context, args);
+                        lastRan = Date.now();
+                    }
+                }, limit - (Date.now() - lastRan));
+            }
+        };
+    }
+
+    startRenderLoop() {
+        const render = (time) => {
+            this.animationFrameId = requestAnimationFrame(render);
+            
+            // Calculate delta time if needed
+            const deltaTime = time - this.lastTime;
+            this.lastTime = time;
+            
+            // Only render if there are changes
+            if (this.needsRender) {
+                this.render();
+                this.needsRender = false;
+            }
+        };
+        
+        this.animationFrameId = requestAnimationFrame(render);
+    }
+
+    stopRenderLoop() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
     }
 
     setupCanvas() {
-        // Set canvas size to 10x viewport
+        // Set canvas size to large dimensions
         this.canvas.width = this.canvasWidth;
         this.canvas.height = this.canvasHeight;
         
-        // Center the viewport
+        // Center the viewport initially
         this.translateX = -this.canvasWidth / 2 + window.innerWidth / 2;
         this.translateY = -this.canvasHeight / 2 + window.innerHeight / 2;
         
         this.updateViewportTransform();
         
+        // Handle window resize
         window.addEventListener('resize', () => {
-            this.canvasWidth = window.innerWidth * 10;
-            this.canvasHeight = window.innerHeight * 10;
-            this.canvas.width = this.canvasWidth;
-            this.canvas.height = this.canvasHeight;
-            this.updateViewportTransform();
+            this.updateViewportBounds();
+            this.throttledRender();
         });
     }
 
     setupEventListeners() {
-        // Canvas mouse events
+        // Canvas mouse events with improved performance
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-        this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
+        this.canvas.addEventListener('wheel', this.handleWheel.bind(this), { passive: false });
         
-        // Context menu
-        this.container.addEventListener('contextmenu', this.handleContextMenu.bind(this));
+        // Touch events for mobile support
+        this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
+        this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+        this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
         
-        // Selection box events
+        // Selection box events with better error handling
         this.selectionBox.addEventListener('mousedown', this.handleSelectionBoxMouseDown.bind(this));
-        document.addEventListener('mousemove', this.handleSelectionBoxMouseMove.bind(this));
-        document.addEventListener('mouseup', this.handleSelectionBoxMouseUp.bind(this));
         
-        // Keyboard events for panning
-        document.addEventListener('keydown', (e) => {
-            if (e.key === ' ' && !e.repeat) {
-                e.preventDefault();
-                this.startPanning();
-            }
-        });
+        // Document-wide mouse events for panning and selection
+        document.addEventListener('mousemove', this.handleDocumentMouseMove.bind(this));
+        document.addEventListener('mouseup', this.handleDocumentMouseUp.bind(this));
         
-        document.addEventListener('keyup', (e) => {
-            if (e.key === ' ') {
-                e.preventDefault();
-                this.stopPanning();
+        // Keyboard events with modifier key support
+        document.addEventListener('keydown', this.handleKeyDown.bind(this));
+        document.addEventListener('keyup', this.handleKeyUp.bind(this));
+    }
+
+    // Improved panning with momentum and bounds checking
+    startPanning(clientX, clientY) {
+        this.isPanning = true;
+        this.lastPanX = clientX;
+        this.lastPanY = clientY;
+        this.container.style.cursor = 'grabbing';
+    }
+
+    stopPanning() {
+        this.isPanning = false;
+        this.container.style.cursor = this.drawingTool === 'pan' ? 'grab' : 'default';
+    }
+
+    handlePan(clientX, clientY) {
+        if (!this.isPanning) return;
+        
+        const dx = clientX - this.lastPanX;
+        const dy = clientY - this.lastPanY;
+        
+        this.translateX += dx;
+        this.translateY += dy;
+        
+        // Apply bounds checking to prevent panning too far
+        const maxPanX = this.canvasWidth - window.innerWidth / this.scale;
+        const maxPanY = this.canvasHeight - window.innerHeight / this.scale;
+        
+        this.translateX = Math.max(-maxPanX, Math.min(0, this.translateX));
+        this.translateY = Math.max(-maxPanY, Math.min(0, this.translateY));
+        
+        this.lastPanX = clientX;
+        this.lastPanY = clientY;
+        
+        this.updateViewportTransform();
+        this.updateViewportBounds();
+        this.throttledRender();
+    }
+
+    // Improved zoom with center point preservation
+    handleZoom(deltaY, clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        
+        // Calculate zoom factor (pinch-zoom friendly)
+        const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
+        const newScale = Math.max(0.1, Math.min(5, this.scale * zoomFactor));
+        
+        // Calculate the new translation to zoom towards the mouse position
+        this.translateX = x - (x - this.translateX) * (newScale / this.scale);
+        this.translateY = y - (y - this.translateY) * (newScale / this.scale);
+        
+        this.scale = newScale;
+        this.updateViewportTransform();
+        this.updateViewportBounds();
+        this.throttledRender();
+    }
+
+    updateViewportTransform() {
+        this.viewport.style.transform = `translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;
+    }
+
+    updateViewportBounds() {
+        const rect = this.container.getBoundingClientRect();
+        this.viewportBounds = {
+            left: -this.translateX / this.scale,
+            top: -this.translateY / this.scale,
+            right: (-this.translateX + rect.width) / this.scale,
+            bottom: (-this.translateY + rect.height) / this.scale
+        };
+    }
+
+    // Only render elements that are visible in the viewport
+    renderVisibleElements() {
+        const elements = document.querySelectorAll('.element');
+        elements.forEach(element => {
+            const rect = element.getBoundingClientRect();
+            const isVisible = 
+                rect.right > this.viewportBounds.left &&
+                rect.left < this.viewportBounds.right &&
+                rect.bottom > this.viewportBounds.top &&
+                rect.top < this.viewportBounds.bottom;
+            
+            element.style.display = isVisible ? 'block' : 'none';
+            
+            // For performance, we can also adjust quality based on zoom level
+            if (isVisible && element.classList.contains('image-element') && this.scale < 0.5) {
+                element.querySelector('img').style.imageRendering = 'pixelated';
+            } else if (element.classList.contains('image-element')) {
+                element.querySelector('img').style.imageRendering = 'auto';
             }
         });
     }
 
+    // Improved element position calculations with zoom support
+    screenToCanvas(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left - this.translateX) / this.scale,
+            y: (clientY - rect.top - this.translateY) / this.scale
+        };
+    }
+
+    canvasToScreen(x, y) {
+        return {
+            x: x * this.scale + this.translateX,
+            y: y * this.scale + this.translateY
+        };
+    }
+
+    switchMathTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll('.math-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        
+        // Update tab panels
+        document.querySelectorAll('.math-panel-content').forEach(panel => {
+            panel.classList.remove('active');
+        });
+        document.getElementById(`${tabId}-panel`).classList.add('active');
+    }
+
+    saveToRecentSymbols(symbol) {
+        // Get recent symbols from localStorage
+        let recentSymbols = JSON.parse(localStorage.getItem('onenote-recent-symbols') || '[]');
+        
+        // Remove if already exists
+        recentSymbols = recentSymbols.filter(s => s !== symbol);
+        
+        // Add to beginning
+        recentSymbols.unshift(symbol);
+        
+        // Keep only the 10 most recent
+        recentSymbols = recentSymbols.slice(0, 10);
+        
+        // Save to localStorage
+        localStorage.setItem('onenote-recent-symbols', JSON.stringify(recentSymbols));
+        
+        // Update recent symbols tab
+        this.updateRecentSymbolsTab();
+    }
+
+    updateRecentSymbolsTab() {
+        const recentSymbols = JSON.parse(localStorage.getItem('onenote-recent-symbols') || '[]');
+        const recentPanel = document.getElementById('recent-panel');
+        
+        if (recentPanel) {
+            recentPanel.innerHTML = '';
+            
+            if (recentSymbols.length === 0) {
+                recentPanel.innerHTML = '<p>No recent symbols</p>';
+            } else {
+                const symbolsGrid = document.createElement('div');
+                symbolsGrid.className = 'symbols-grid';
+                
+                recentSymbols.forEach(symbol => {
+                    const button = document.createElement('button');
+                    button.className = 'symbol-btn';
+                    button.setAttribute('data-symbol', symbol);
+                    button.textContent = symbol;
+                    button.addEventListener('click', () => {
+                        const textarea = document.getElementById('math-latex');
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const text = textarea.value;
+                        const before = text.substring(0, start);
+                        const after = text.substring(end);
+                        
+                        textarea.value = before + symbol + after;
+                        textarea.focus();
+                        textarea.setSelectionRange(start + symbol.length, start + symbol.length);
+                    });
+                    
+                    symbolsGrid.appendChild(button);
+                });
+                
+                recentPanel.appendChild(symbolsGrid);
+            }
+        }
+    }
+
     handleMouseDown(e) {
+        const pos = this.screenToCanvas(e.clientX, e.clientY);
+        this.startX = pos.x;
+        this.startY = pos.y;
+        
+        if (this.drawingTool === 'pan') {
+            this.startPanning(e.clientX, e.clientY);
+            return;
+        }
+
         const rect = this.canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left - this.translateX) / this.scale;
         const y = (e.clientY - rect.top - this.translateY) / this.scale;
@@ -145,6 +393,11 @@ export class Canvas {
     }
 
     handleMouseMove(e) {
+        if (this.isPanning) {
+            this.handlePan(e.clientX, e.clientY);
+            return;
+        }
+
         const rect = this.canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left - this.translateX) / this.scale;
         const y = (e.clientY - rect.top - this.translateY) / this.scale;
@@ -154,6 +407,7 @@ export class Canvas {
             this.translateX += e.movementX;
             this.translateY += e.movementY;
             this.updateViewportTransform();
+            this.needsRender = true;
             return;
         }
         
@@ -176,9 +430,9 @@ export class Canvas {
                 this.ctx.lineTo(x, y);
                 this.ctx.stroke();
             } else if (this.drawingTool === 'shape') {
-                // Drawing shape
+                // Drawing shape - show ghost
                 this.redrawCanvas();
-                this.drawShape(this.startX, this.startY, x, y);
+                this.drawShape(this.startX, this.startY, x, y, true);
             }
             
             this.lastX = x;
@@ -195,6 +449,7 @@ export class Canvas {
             this.selectedElement.element.style.top = `${element.y}px`;
             
             this.updateSelectionBox();
+            this.needsRender = true;
         }
     }
 
@@ -226,6 +481,7 @@ export class Canvas {
             }
             
             this.app.history.saveState();
+            this.needsRender = true;
         }
         
         if (this.isDragging) {
@@ -240,22 +496,70 @@ export class Canvas {
 
     handleWheel(e) {
         e.preventDefault();
-        
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Calculate new scale
-        const scaleFactor = e.deltaY < 0 ? 1.1 : 0.9;
-        const newScale = Math.max(0.1, Math.min(5, this.scale * scaleFactor));
-        
-        // Calculate the new translation to zoom towards the mouse position
-        this.translateX = x - (x - this.translateX) * (newScale / this.scale);
-        this.translateY = y - (y - this.translateY) * (newScale / this.scale);
-        
-        this.scale = newScale;
-        this.updateViewportTransform();
+        this.handleZoom(e.deltaY, e.clientX, e.clientY);
     }
+
+    // Touch event handlers for mobile support
+    handleTouchStart(e) {
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            this.handleMouseDown(new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }));
+        } else if (e.touches.length === 2) {
+            // Handle pinch zoom
+            this.pinchZoom = {
+                startDistance: this.getTouchDistance(e.touches[0], e.touches[1]),
+                startScale: this.scale,
+                center: this.getTouchCenter(e.touches[0], e.touches[1])
+            };
+            e.preventDefault();
+        }
+    }
+
+    handleTouchMove(e) {
+        if (e.touches.length === 1 && !this.pinchZoom) {
+            const touch = e.touches[0];
+            this.handleMouseMove(new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }));
+        } else if (e.touches.length === 2 && this.pinchZoom) {
+            const distance = this.getTouchDistance(e.touches[0], e.touches[1]);
+            const scale = this.pinchZoom.startScale * (distance / this.pinchZoom.startDistance);
+            
+            // Calculate the average position of the two touches
+            const center = this.getTouchCenter(e.touches[0], e.touches[1]);
+            
+            // Handle the zoom
+            this.handleZoom(scale > this.scale ? -1 : 1, center.x, center.y);
+            e.preventDefault();
+        }
+    }
+
+    handleTouchEnd(e) {
+        if (e.touches.length === 0) {
+            this.pinchZoom = null;
+            this.handleMouseUp(new MouseEvent('mouseup'));
+        } else if (e.touches.length === 1) {
+            this.pinchZoom = null;
+        }
+    }
+
+    getTouchDistance(touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    getTouchCenter(touch1, touch2) {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2
+        };
+    }
+
 
     handleContextMenu(e) {
         e.preventDefault();
@@ -293,20 +597,22 @@ export class Canvas {
             
             let newWidth = this.startWidth;
             let newHeight = this.startHeight;
+            let newX = element.x;
+            let newY = element.y;
             
             if (this.resizeHandle.includes('right')) {
                 newWidth = e.clientX - rect.left;
             }
             if (this.resizeHandle.includes('left')) {
                 newWidth = rect.right - e.clientX;
-                element.element.style.left = `${e.clientX}px`;
+                newX = e.clientX;
             }
             if (this.resizeHandle.includes('bottom')) {
                 newHeight = e.clientY - rect.top;
             }
             if (this.resizeHandle.includes('top')) {
                 newHeight = rect.bottom - e.clientY;
-                element.element.style.top = `${e.clientY}px`;
+                newY = e.clientY;
             }
             
             // Maintain aspect ratio for images if shift is not pressed
@@ -321,15 +627,30 @@ export class Canvas {
             
             element.element.style.width = `${Math.max(20, newWidth)}px`;
             element.element.style.height = `${Math.max(20, newHeight)}px`;
+            element.element.style.left = `${newX}px`;
+            element.element.style.top = `${newY}px`;
             
             // Update element data
             const elementData = this.app.currentPage.elements[this.selectedElement.id];
             elementData.width = parseInt(element.element.style.width);
             elementData.height = parseInt(element.element.style.height);
+            elementData.x = newX;
+            elementData.y = newY;
             
             // For text and math elements, adjust content to fit new size
-            if (elementData.type === 'text' || elementData.type === 'math') {
-                element.element.style.fontSize = `${Math.max(12, elementData.width / 20)}px`;
+            if (elementData.type === 'text') {
+                const editor = element.element.querySelector('.ProseMirror');
+                if (editor) {
+                    editor.style.fontSize = `${Math.max(12, elementData.width / 20)}px`;
+                }
+            } else if (elementData.type === 'math') {
+                // Re-render math with new size
+                element.element.innerHTML = '';
+                katex.render(elementData.latex, element.element, {
+                    throwOnError: false,
+                    displayMode: true,
+                    maxSize: Math.max(elementData.width, elementData.height)
+                });
             }
             
             this.updateSelectionBox();
@@ -530,44 +851,65 @@ export class Canvas {
         }
         
         try {
-            // Create a temporary div to render the math
-            const tempDiv = document.createElement('div');
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.visibility = 'hidden';
-            document.body.appendChild(tempDiv);
-            
-            // Render the math
-            katex.render(latex, tempDiv, {
-                throwOnError: false,
-                displayMode: true
-            });
-            
-            // Get the rendered HTML
-            const mathHtml = tempDiv.innerHTML;
-            
-            // Clean up
-            document.body.removeChild(tempDiv);
-            
-            const mathElement = {
-                type: 'math',
-                x: 100,
-                y: 100,
-                width: 200,
-                height: 100,
-                rotation: 0,
-                latex: latex,
-                html: mathHtml
-            };
-            
-            this.app.addElement(mathElement);
+            // If we have a selected math element, update it
+            if (this.app.selectedElement !== null && 
+                this.app.currentPage.elements[this.app.selectedElement].type === 'math') {
+                const element = this.app.currentPage.elements[this.app.selectedElement];
+                
+                // Update the latex
+                element.latex = latex;
+                
+                // Re-render the math
+                const mathElement = document.querySelector(`[data-id="${this.app.selectedElement}"]`);
+                if (mathElement) {
+                    mathElement.innerHTML = '';
+                    katex.render(latex, mathElement, {
+                        throwOnError: false,
+                        displayMode: true
+                    });
+                }
+                
+                this.app.updateElement(this.app.selectedElement, { latex: latex, html: mathElement.innerHTML });
+                this.app.ui.showToast('Math equation updated');
+            } else {
+                // Create a temporary div to render the math
+                const tempDiv = document.createElement('div');
+                tempDiv.style.position = 'absolute';
+                tempDiv.style.visibility = 'hidden';
+                document.body.appendChild(tempDiv);
+                
+                // Render the math
+                katex.render(latex, tempDiv, {
+                    throwOnError: false,
+                    displayMode: true
+                });
+                
+                // Get the rendered HTML
+                const mathHtml = tempDiv.innerHTML;
+                
+                // Clean up
+                document.body.removeChild(tempDiv);
+                
+                const mathElement = {
+                    type: 'math',
+                    x: 100,
+                    y: 100,
+                    width: 200,
+                    height: 100,
+                    rotation: 0,
+                    latex: latex,
+                    html: mathHtml
+                };
+                
+                this.app.addElement(mathElement);
+                this.app.ui.showToast('Math equation inserted');
+            }
             
             // Clear the input
             document.getElementById('math-latex').value = '';
             
             // Close the tools drawer
             this.app.ui.closeToolsDrawer();
-            
-            this.app.ui.showToast('Math equation inserted');
         } catch (e) {
             this.app.ui.showToast('Error rendering math equation: ' + e.message);
         }
@@ -647,10 +989,18 @@ export class Canvas {
         }
     }
 
-    drawShape(startX, startY, endX, endY) {
+    drawShape(startX, startY, endX, endY, isGhost = false) {
         this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.strokeStyle = '#000000';
-        this.ctx.lineWidth = 2;
+        
+        if (isGhost) {
+            this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.lineWidth = 1;
+            this.ctx.setLineDash([5, 5]);
+        } else {
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([]);
+        }
         
         switch (this.currentShape) {
             case 'rectangle':
@@ -682,6 +1032,15 @@ export class Canvas {
                 this.ctx.stroke();
                 break;
         }
+        
+        // Reset line dash
+        this.ctx.setLineDash([]);
+    }
+
+    render() {
+        // This would be used to redraw saved canvas content
+        // For now, we'll just clear it
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     redrawCanvas() {

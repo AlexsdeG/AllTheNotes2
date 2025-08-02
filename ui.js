@@ -60,6 +60,18 @@ export class UI {
             this.formatText('foreColor', e.target.value);
         });
         
+        // Update formatting button states when text is selected
+        document.addEventListener('selectionchange', () => {
+            this.updateFormattingButtonStates();
+        });
+        
+        // Also, when a text element is focused, update the formatting buttons
+        document.addEventListener('focusin', (e) => {
+            if (e.target.closest('.ProseMirror')) {
+                this.updateFormattingButtonStates();
+            }
+        });
+        
         // Insert buttons
         document.getElementById('insert-select-btn').addEventListener('click', () => {
             this.setActiveTool('select');
@@ -238,16 +250,62 @@ export class UI {
                 this.hideContextMenu();
             }
         });
+
+        // Settings button
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            document.getElementById('settings-modal').classList.add('show');
+        });
+        
+        // Close modal buttons
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('settings-modal').classList.remove('show');
+            });
+        });
+        
+        // Save settings button
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+            // Save settings to localStorage or app state
+            const settings = {
+                gridSize: document.getElementById('grid-size').value,
+                enableEncryption: document.getElementById('enable-encryption').checked,
+                encryptionPassword: document.getElementById('encryption-password').value,
+                enableSync: document.getElementById('enable-sync').checked,
+                backendUrl: document.getElementById('backend-url').value
+            };
+            
+            localStorage.setItem('onenote-settings', JSON.stringify(settings));
+            this.app.ui.showToast('Settings saved');
+            document.getElementById('settings-modal').classList.remove('show');
+        });
+        
+        // Load settings when the app starts
+        this.loadSettings();
+    }
+
+    loadSettings() {
+        const savedSettings = localStorage.getItem('onenote-settings');
+        if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            
+            document.getElementById('grid-size').value = settings.gridSize || 20;
+            document.getElementById('grid-size-value').textContent = `${settings.gridSize || 20}px`;
+            
+            document.getElementById('enable-encryption').checked = settings.enableEncryption || false;
+            document.getElementById('encryption-password').value = settings.encryptionPassword || '';
+            
+            document.getElementById('enable-sync').checked = settings.enableSync || false;
+            document.getElementById('backend-url').value = settings.backendUrl || '';
+        }
     }
 
     setupTreeContextMenu() {
-        // Create context menu for tree items
         const treeContextMenu = document.createElement('div');
         treeContextMenu.className = 'context-menu';
         treeContextMenu.id = 'tree-context-menu';
         treeContextMenu.innerHTML = `
             <div class="context-menu-item" id="tree-rename">Rename</div>
-            <div class="context-menu-item" id="tree-add-section">Add Section</div>
+            <div class="context-menu-item" id="tree-add-subfolder">Add Subfolder</div>
             <div class="context-menu-item" id="tree-add-page">Add Page</div>
             <div class="context-menu-item" id="tree-delete">Delete</div>
         `;
@@ -265,8 +323,14 @@ export class UI {
             this.hideTreeContextMenu();
         });
         
-        document.getElementById('tree-add-section').addEventListener('click', () => {
-            this.app.addSection();
+        document.getElementById('tree-add-subfolder').addEventListener('click', () => {
+            if (this.treeContextTarget) {
+                const { type, index } = this.treeContextTarget.dataset;
+                // For now, we only support sections (which are like folders)
+                if (type === 'section') {
+                    this.app.addSubfolder(parseInt(index));
+                }
+            }
             this.hideTreeContextMenu();
         });
         
@@ -341,7 +405,17 @@ export class UI {
     }
 
     formatText(command, value = null) {
+        // Save the current selection
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+        
+        // Execute the command
         document.execCommand(command, false, value);
+        
+        // Restore the selection if it was lost
+        if (range && selection.rangeCount === 0) {
+            selection.addRange(range);
+        }
         
         // If we have a selected text element, update its content
         if (this.app.selectedElement !== null) {
@@ -365,6 +439,11 @@ export class UI {
         document.getElementById('italic-btn').classList.toggle('active', document.queryCommandState('italic'));
         document.getElementById('underline-btn').classList.toggle('active', document.queryCommandState('underline'));
         document.getElementById('strikethrough-btn').classList.toggle('active', document.queryCommandState('strikeThrough'));
+        
+        // Update alignment buttons
+        document.getElementById('align-left-btn').classList.toggle('active', document.queryCommandState('justifyLeft'));
+        document.getElementById('align-center-btn').classList.toggle('active', document.queryCommandState('justifyCenter'));
+        document.getElementById('align-right-btn').classList.toggle('active', document.queryCommandState('justifyRight'));
     }
 
     setActiveTool(tool, shape = null) {
@@ -516,114 +595,149 @@ export class UI {
         
         treeContainer.appendChild(notebookEl);
         
-        // Render sections
+        // Render sections and pages recursively
+        const sectionsContainer = document.createElement('div');
+        sectionsContainer.className = 'sections-container';
+        
         this.app.notebook.sections.forEach((section, sectionIndex) => {
-            const sectionEl = document.createElement('div');
-            sectionEl.className = 'section-item';
-            if (section === this.app.currentSection) {
-                sectionEl.classList.add('active');
-            }
-            
-            sectionEl.innerHTML = `
-                <div class="item-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
-                    </svg>
-                </div>
-                <div class="item-title" data-type="section" data-index="${sectionIndex}">${section.name}</div>
-                <div class="item-actions">
-                    <button class="action-btn add-page-btn" title="Add Page">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"/>
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                        </svg>
-                    </button>
-                    <button class="action-btn delete-section-btn" title="Delete Section">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            
-            // Add event listeners for section
-            sectionEl.querySelector('.add-page-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.app.addPage(sectionIndex);
-            });
-            
-            sectionEl.querySelector('.delete-section-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (confirm('Are you sure you want to delete this section and all its pages?')) {
-                    this.app.deleteItem('section', sectionIndex);
-                }
-            });
-            
-            sectionEl.addEventListener('contextmenu', (e) => {
-                this.showTreeContextMenu(e, sectionEl.querySelector('.item-title'));
-            });
-            
-            sectionEl.addEventListener('click', (e) => {
-                if (!e.target.closest('.item-actions')) {
-                    this.app.currentSection = section;
-                    this.app.currentPage = section.pages[0];
-                    this.app.selectedElement = null;
-                    this.renderNotebooksTree();
-                    this.app.renderPage();
-                    this.app.history.clear();
-                }
-            });
-            
-            treeContainer.appendChild(sectionEl);
-            
-            // Render pages
-            section.pages.forEach((page, pageIndex) => {
-                const pageEl = document.createElement('div');
-                pageEl.className = 'page-item';
-                if (section === this.app.currentSection && page === this.app.currentPage) {
-                    pageEl.classList.add('active');
-                }
-                
-                pageEl.innerHTML = `
-                    <div class="item-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                    </div>
-                    <div class="item-title" data-type="page" data-index="${pageIndex}">${page.name}</div>
-                    <div class="item-actions">
-                        <button class="action-btn delete-page-btn" title="Delete Page">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                            </svg>
-                        </button>
-                    </div>
-                `;
-                
-                // Add event listeners for page
-                pageEl.querySelector('.delete-page-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (confirm('Are you sure you want to delete this page?')) {
-                        this.app.deleteItem('page', pageIndex);
-                    }
-                });
-                
-                pageEl.addEventListener('contextmenu', (e) => {
-                    this.showTreeContextMenu(e, pageEl.querySelector('.item-title'));
-                });
-                
-                pageEl.addEventListener('click', (e) => {
-                    if (!e.target.closest('.item-actions')) {
-                        this.app.selectPage(sectionIndex, pageIndex);
-                    }
-                });
-                
-                treeContainer.appendChild(pageEl);
-            });
+            const sectionEl = this.createSectionElement(section, sectionIndex);
+            sectionsContainer.appendChild(sectionEl);
         });
+        
+        notebookEl.appendChild(sectionsContainer);
+    }
+
+    createSectionElement(section, sectionIndex) {
+        const sectionEl = document.createElement('div');
+        sectionEl.className = 'section-item';
+        if (section.expanded !== false) { // Default to expanded
+            sectionEl.classList.add('expanded');
+        }
+        
+        sectionEl.innerHTML = `
+            <div class="item-icon expand-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                </svg>
+            </div>
+            <div class="item-icon folder-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                </svg>
+            </div>
+            <div class="item-title" data-type="section" data-index="${sectionIndex}">${section.name}</div>
+            <div class="item-actions">
+                <button class="action-btn add-page-btn" title="Add Page">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </button>
+                <button class="action-btn delete-section-btn" title="Delete Section">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        // Toggle expand/collapse
+        sectionEl.querySelector('.expand-icon').addEventListener('click', (e) => {
+            e.stopPropagation();
+            sectionEl.classList.toggle('expanded');
+            section.expanded = sectionEl.classList.contains('expanded');
+        });
+        
+        // Add event listeners for section
+        sectionEl.querySelector('.add-page-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.app.addPage(sectionIndex);
+        });
+        
+        sectionEl.querySelector('.delete-section-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to delete this section and all its pages?')) {
+                this.app.deleteItem('section', sectionIndex);
+            }
+        });
+        
+        sectionEl.addEventListener('contextmenu', (e) => {
+            this.showTreeContextMenu(e, sectionEl.querySelector('.item-title'));
+        });
+        
+        sectionEl.addEventListener('click', (e) => {
+            if (!e.target.closest('.item-actions') && !e.target.closest('.expand-icon')) {
+                this.app.currentSection = section;
+                this.app.currentPage = section.pages[0];
+                this.app.selectedElement = null;
+                this.renderNotebooksTree();
+                this.app.renderPage();
+                this.app.history.clear();
+            }
+        });
+        
+        // Render pages and subfolders
+        const pagesContainer = document.createElement('div');
+        pagesContainer.className = 'pages-container';
+        
+        // First, render any subfolders (if we implement nested folders)
+        // For now, we only have pages
+        
+        section.pages.forEach((page, pageIndex) => {
+            const pageEl = this.createPageElement(page, pageIndex, sectionIndex);
+            pagesContainer.appendChild(pageEl);
+        });
+        
+        sectionEl.appendChild(pagesContainer);
+        return sectionEl;
+    }
+
+    createPageElement(page, pageIndex, sectionIndex) {
+        const pageEl = document.createElement('div');
+        pageEl.className = 'page-item';
+        if (this.app.currentSection === this.app.notebook.sections[sectionIndex] && 
+            this.app.currentPage === page) {
+            pageEl.classList.add('active');
+        }
+        
+        pageEl.innerHTML = `
+            <div class="item-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+            </div>
+            <div class="item-title" data-type="page" data-index="${pageIndex}">${page.name}</div>
+            <div class="item-actions">
+                <button class="action-btn delete-page-btn" title="Delete Page">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners for page
+        pageEl.querySelector('.delete-page-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm('Are you sure you want to delete this page?')) {
+                this.app.deleteItem('page', pageIndex);
+            }
+        });
+        
+        pageEl.addEventListener('contextmenu', (e) => {
+            this.showTreeContextMenu(e, pageEl.querySelector('.item-title'));
+        });
+        
+        pageEl.addEventListener('click', (e) => {
+            if (!e.target.closest('.item-actions')) {
+                this.app.selectPage(sectionIndex, pageIndex);
+            }
+        });
+        
+        return pageEl;
     }
 
     getCurrentSectionIndex() {
